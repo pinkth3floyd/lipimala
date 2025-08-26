@@ -30,8 +30,6 @@ import { pipeline} from '@huggingface/transformers';
 export async function translateText2(text: string, sourceLang: string, targetLang: string) {
 
     console.log("Translating====>>>>",text, sourceLang, targetLang);
-
-    
     const generator = await pipeline('translation', 'Xenova/nllb-200-distilled-600M');
     const output = await (generator as unknown as (text: string, options: { src_lang: string; tgt_lang: string }) => Promise<unknown>)(text, { src_lang: sourceLang, tgt_lang: targetLang });
 

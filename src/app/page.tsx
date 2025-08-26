@@ -24,7 +24,7 @@ export default function Home() {
     setResult(null);
 
     try {
-      const translationResult = await translateText2(inputText, 'eng_Latn', 'hin_Deva');
+      const translationResult = await translateText2(inputText, 'eng_Latn', 'npi_Deva');
       setResult(translationResult as TranslationResult);
     } catch (err) {
       console.error('Translation error:', err);
