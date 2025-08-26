@@ -1,4 +1,3 @@
-import { pipeline } from "@huggingface/transformers";
 import PipelineSingleton from "../core/config/config";
 
 export async function TestTransformer(){
@@ -24,7 +23,6 @@ export async function TranslatorTransformer(text: string){
     } catch (error) {
         console.error('Singleton pipeline failed, trying direct pipeline:', error);
         
-       
     }
 }
 

@@ -1,29 +1,29 @@
 
-import { pipeline,AutoTokenizer,AutoModelForMaskedLM } from '@huggingface/transformers';
+import { pipeline} from '@huggingface/transformers';
 
-export async function translateText(text: string, sourceLang: string, targetLang: string) {
-
-
+// export async function translateText(text: string, sourceLang: string, targetLang: string) {
 
 
-    const tokenizer = await AutoTokenizer.from_pretrained('Sakonii/distilbert-base-nepali');
-    const model = await AutoModelForMaskedLM.from_pretrained('Sakonii/distilbert-base-nepali');
+
+
+//     const tokenizer = await AutoTokenizer.from_pretrained('Sakonii/distilbert-base-nepali');
+//     const model = await AutoModelForMaskedLM.from_pretrained('Sakonii/distilbert-base-nepali');
 
     
     
-    const toconvert = "चाहिएको text यता राख्नु होला।"
-    const encoded = tokenizer.encode(toconvert);
-    const decoded = tokenizer.decode(encoded);
-    console.log(decoded);
+//     const toconvert = "चाहिएको text यता राख्नु होला।"
+//     const encoded = tokenizer.encode(toconvert);
+//     const decoded = tokenizer.decode(encoded);
+//     console.log(decoded);
   
 
 
-    return decoded;
-    // const generator = await pipeline('fill-mask', 'Sakonii/distilbert-base-nepali');
-    // const output = await generator(text, {
-    // });
-    // return output;
-}
+//     return decoded;
+//     // const generator = await pipeline('fill-mask', 'Sakonii/distilbert-base-nepali');
+//     // const output = await generator(text, {
+//     // });
+//     // return output;
+// }
 
 
 
