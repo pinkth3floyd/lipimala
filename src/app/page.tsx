@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import {useEffect } from 'react';
 import { translateText2 } from './actions/actions';
 
 export default function Home() {
