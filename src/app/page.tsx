@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { translateText2 } from './actions/actions';
+import { correctNepaliGrammar } from './actions/grammarActions';
 
 // Define the type for translation result
 interface TranslationResult {
@@ -9,9 +10,22 @@ interface TranslationResult {
   [key: string]: unknown;
 }
 
+// Define the type for grammar correction result
+interface GrammarCorrectionResult {
+  status: 'Correct' | 'Incorrect';
+  original: string;
+  tokens?: string[];
+  incorrect_positions?: number[];
+  incorrect_tokens?: string[];
+  suggestions?: Record<number, string[]>;
+  corrected_sentence?: string;
+}
+
 export default function Home() {
+  const [activeTab, setActiveTab] = useState<'translation' | 'grammar'>('translation');
   const [inputText, setInputText] = useState('');
-  const [result, setResult] = useState<TranslationResult | null>(null);
+  const [translationResult, setTranslationResult] = useState<TranslationResult | null>(null);
+  const [grammarResult, setGrammarResult] = useState<GrammarCorrectionResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -21,11 +35,12 @@ export default function Home() {
 
     setLoading(true);
     setError(null);
-    setResult(null);
+    setTranslationResult(null);
+    setGrammarResult(null);
 
     try {
-      const translationResult = await translateText2(inputText, 'eng_Latn', 'npi_Deva');
-      setResult(translationResult as TranslationResult);
+      const result = await translateText2(inputText, 'eng_Latn', 'npi_Deva');
+      setTranslationResult(result as TranslationResult);
     } catch (err) {
       console.error('Translation error:', err);
       setError('Failed to translate text. Please try again.');
@@ -34,22 +49,80 @@ export default function Home() {
     }
   };
 
+  const handleGrammarCorrection = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputText.trim()) return;
+
+    setLoading(true);
+    setError(null);
+    setTranslationResult(null);
+    setGrammarResult(null);
+
+    try {
+      const result = await correctNepaliGrammar(inputText);
+      setGrammarResult(result);
+    } catch (err) {
+      console.error('Grammar correction error:', err);
+      setError('Failed to correct grammar. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    if (activeTab === 'translation') {
+      handleTranslate(e);
+    } else {
+      handleGrammarCorrection(e);
+    }
+  };
+
   return (
     <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
       <div className="w-full max-w-2xl">
-        <h1 className="text-3xl font-bold text-center mb-8">Text Translator</h1>
+        <h1 className="text-3xl font-bold text-center mb-8 text-white">Nepali Language Tools</h1>
         
-        <form onSubmit={handleTranslate} className="space-y-4">
+        {/* Tab Navigation */}
+        <div className="flex mb-6 bg-gray-800 rounded-lg p-1">
+          <button
+            onClick={() => setActiveTab('translation')}
+            className={`flex-1 py-2 px-4 rounded-md transition-colors ${
+              activeTab === 'translation'
+                ? 'bg-blue-500 text-white'
+                : 'text-gray-300 hover:text-white'
+            }`}
+          >
+            Translation
+          </button>
+          <button
+            onClick={() => setActiveTab('grammar')}
+            className={`flex-1 py-2 px-4 rounded-md transition-colors ${
+              activeTab === 'grammar'
+                ? 'bg-blue-500 text-white'
+                : 'text-gray-300 hover:text-white'
+            }`}
+          >
+            Grammar Correction
+          </button>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label htmlFor="inputText" className="block text-sm font-medium text-gray-700 mb-2 text-white">
-              Enter text to translate (English to Hindi):
+            <label htmlFor="inputText" className="block text-sm font-medium text-gray-300 mb-2">
+              {activeTab === 'translation' 
+                ? 'Enter text to translate (English to Nepali):'
+                : 'Enter Nepali text for grammar correction:'
+              }
             </label>
             <textarea
               id="inputText"
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
-              placeholder="Type your text here..."
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              placeholder={activeTab === 'translation' 
+                ? "Type your English text here..."
+                : "Type your Nepali text here..."
+              }
+              className="w-full p-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-gray-700 text-white"
               rows={4}
               required
             />
@@ -60,27 +133,80 @@ export default function Home() {
             disabled={loading || !inputText.trim()}
             className="w-full bg-blue-500 text-white py-3 px-6 rounded-lg hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
           >
-            {loading ? 'Translating...' : 'Translate'}
+            {loading 
+              ? (activeTab === 'translation' ? 'Translating...' : 'Correcting...')
+              : (activeTab === 'translation' ? 'Translate' : 'Correct Grammar')
+            }
           </button>
         </form>
 
         {loading && (
           <div className="mt-6 text-center">
-            <p className="text-gray-600">Translating your text...</p>
+            <p className="text-gray-300">
+              {activeTab === 'translation' ? 'Translating your text...' : 'Correcting grammar...'}
+            </p>
           </div>
         )}
 
         {error && (
-          <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-600">{error}</p>
+          <div className="mt-6 p-4 bg-red-900 border border-red-700 rounded-lg">
+            <p className="text-red-300">{error}</p>
           </div>
         )}
 
-        {result && !loading && (
+        {/* Translation Result */}
+        {translationResult && !loading && activeTab === 'translation' && (
           <div className="mt-6">
-            <h2 className="text-xl font-semibold mb-3">Translation Result:</h2>
-            <div className="bg-gray-50 p-4 rounded-lg border">
-              <pre className="whitespace-pre-wrap text-gray-800">{JSON.stringify(result, null, 2)}</pre>
+            <h2 className="text-xl font-semibold mb-3 text-white">Translation Result:</h2>
+            <div className="bg-gray-700 p-4 rounded-lg border border-gray-600">
+              <pre className="whitespace-pre-wrap text-gray-200">{JSON.stringify(translationResult, null, 2)}</pre>
+            </div>
+          </div>
+        )}
+
+        {/* Grammar Correction Result */}
+        {grammarResult && !loading && activeTab === 'grammar' && (
+          <div className="mt-6">
+            <h2 className="text-xl font-semibold mb-3 text-white">Grammar Correction Result:</h2>
+            <div className="bg-gray-700 p-4 rounded-lg border border-gray-600">
+              <div className="space-y-3">
+                <div>
+                  <span className="font-medium text-gray-300">Status: </span>
+                  <span className={`px-2 py-1 rounded text-sm ${
+                    grammarResult.status === 'Correct' 
+                      ? 'bg-green-600 text-white' 
+                      : 'bg-yellow-600 text-white'
+                  }`}>
+                    {grammarResult.status}
+                  </span>
+                </div>
+                
+                <div>
+                  <span className="font-medium text-gray-300">Original: </span>
+                  <span className="text-gray-200">{grammarResult.original}</span>
+                </div>
+
+                {grammarResult.status === 'Incorrect' && grammarResult.corrected_sentence && (
+                  <div>
+                    <span className="font-medium text-gray-300">Corrected: </span>
+                    <span className="text-green-300">{grammarResult.corrected_sentence}</span>
+                  </div>
+                )}
+
+                {grammarResult.suggestions && Object.keys(grammarResult.suggestions).length > 0 && (
+                  <div>
+                    <span className="font-medium text-gray-300">Suggestions: </span>
+                    <div className="mt-2 space-y-1">
+                      {Object.entries(grammarResult.suggestions).map(([position, suggestions]) => (
+                        <div key={position} className="text-sm">
+                          <span className="text-gray-400">Position {position}: </span>
+                          <span className="text-blue-300">{suggestions.join(', ')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}
