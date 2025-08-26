@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { TranslatorTransformer, TestTransformer } from "./actions";
+import { translateText, translateText2 } from './actions/actions';
 
 // Define the type for translation result
 interface TranslationResult {
@@ -10,6 +11,13 @@ interface TranslationResult {
 }
 
 export default function Home() {
+
+  const data=' Record-Breaking Arrivals in April 2025 In April 2025, Nepal’s tourism sector celebrated a historic milestone with 116,490 foreign tourist arrivals—the highest monthly figure ever recorded for the country. This number marks a 106.5% increase compared to April 2019, the pre‑COVID benchmark, signaling a strong rebound for Nepal’s tourism post-pandemic Fiscal Nepal. From January to April, a total of 415,048 visitors arrived, reflecting steady growth and fueling optimism that tourism could soon contribute even more substantially to Nepal’s GDP, previously around 6%';
+
+
+
+
+
   // const [result, setResult] = useState<TranslationResult | null>(null);
   // const [loading, setLoading] = useState(true);
   // const [error, setError] = useState<string | null>(null);
@@ -41,9 +49,17 @@ export default function Home() {
   // }, []);
 
 
+  // useEffect(() => {
+  //   const res=async()=>{
+  //     const res=await TestTransformer();
+  //     console.log(res);
+  //   }
+  //   res();
+  // }, []);
+
   useEffect(() => {
     const res=async()=>{
-      const res=await TestTransformer();
+      const res=await translateText2(data, 'eng_Latn', 'hin_Deva');
       console.log(res);
     }
     res();

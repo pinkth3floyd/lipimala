@@ -27,3 +27,11 @@ export async function TranslatorTransformer(text: string){
        
     }
 }
+
+
+
+
+
+
+
+
