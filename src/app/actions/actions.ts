@@ -32,11 +32,11 @@ export async function translateText2(text: string, sourceLang: string, targetLan
     console.log("Translating====>>>>",text, sourceLang, targetLang);
     const generator = await pipeline('translation', 'Xenova/nllb-200-distilled-600M');
     // Pass text as string and language options as second parameter
-    const output = await generator(text, { src_lang: sourceLang, tgt_lang: targetLang } as any);
+    const output = await (generator as unknown as (text: string, options: { src_lang: string; tgt_lang: string }) => Promise<unknown>)(text, { src_lang: sourceLang, tgt_lang: targetLang });
 
 
     console.log("Translated====>>>>",output);
 
     
-    return await output;
+    return output;
 }
