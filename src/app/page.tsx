@@ -7,6 +7,8 @@ import { translateText, correctGrammar, getCacheStats } from './actions/optimize
 interface TranslationResult {
   translation_text?: string;
   [key: string]: unknown;
+  fallback_used?: boolean;
+  note?: string;
 }
 
 // Define the type for grammar correction result
@@ -33,6 +35,7 @@ export default function Home() {
   const [grammarResult, setGrammarResult] = useState<GrammarCorrectionResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
+  const [loadingStage, setLoadingStage] = useState<'idle' | 'loading_model' | 'translating'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [cacheStats, setCacheStats] = useState<CacheStats | null>(null);
 
@@ -42,29 +45,58 @@ export default function Home() {
 
     setLoading(true);
     setLoadingMessage('Loading translation model...');
+    setLoadingStage('loading_model');
     setError(null);
     setTranslationResult(null);
     setGrammarResult(null);
 
-    try {
-      // Update loading message after a delay to show model loading progress
-      setTimeout(() => {
-        if (loading) {
-          setLoadingMessage('Model loaded! Translating your text...');
-        }
-      }, 5000);
+    let retryCount = 0;
+    const maxRetries = 2;
 
-      const result = await translateText(inputText, 'eng_Latn', 'npi_Deva');
-      setTranslationResult(result as TranslationResult);
-      updateCacheStats();
-    } catch (err) {
-      console.error('Translation error:', err);
-      const errorMessage = err instanceof Error ? err.message : 'Failed to translate text. Please try again.';
-      setError(errorMessage);
-    } finally {
-      setLoading(false);
-      setLoadingMessage('');
+    while (retryCount <= maxRetries) {
+      try {
+        // Update loading message after a delay to show model loading progress
+        setTimeout(() => {
+          if (loading && loadingStage === 'loading_model') {
+            setLoadingMessage(retryCount > 0 
+              ? `Retry ${retryCount}: Loading translation model...` 
+              : 'Model loaded! Translating your text...'
+            );
+            setLoadingStage('translating');
+          }
+        }, 5000);
+
+        // Add a timeout for the entire translation process
+        const translationPromise = translateText(inputText, 'eng_Latn', 'npi_Deva');
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Translation process timeout')), 60000)
+        );
+
+        const result = await Promise.race([translationPromise, timeoutPromise]);
+        console.log('Translation result received:', result);
+        setTranslationResult(result as TranslationResult);
+        updateCacheStats();
+        break; // Success, exit retry loop
+      } catch (err) {
+        console.error(`Translation error (attempt ${retryCount + 1}):`, err);
+        retryCount++;
+        
+        if (retryCount > maxRetries) {
+          // Final failure
+          const errorMessage = err instanceof Error ? err.message : 'Failed to translate text. Please try again.';
+          setError(errorMessage);
+          break;
+        } else {
+          // Retry with delay
+          setLoadingMessage(`Attempt ${retryCount} failed. Retrying...`);
+          await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay between retries
+        }
+      }
     }
+
+    setLoading(false);
+    setLoadingMessage('');
+    setLoadingStage('idle');
   };
 
   const handleGrammarCorrection = async (e: React.FormEvent) => {
@@ -73,6 +105,7 @@ export default function Home() {
 
     setLoading(true);
     setLoadingMessage('Loading grammar correction model...');
+    setLoadingStage('loading_model');
     setError(null);
     setTranslationResult(null);
     setGrammarResult(null);
@@ -200,11 +233,16 @@ export default function Home() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
             <p className="text-gray-300">{loadingMessage}</p>
             <p className="text-sm text-gray-400 mt-2">
-              {activeTab === 'translation' 
-                ? 'This may take a few moments on first use as the model loads...'
-                : 'Analyzing your text...'
+              {loadingStage === 'loading_model' 
+                ? 'Downloading and loading translation model... This may take a few minutes on first use.'
+                : 'Translating your text...'
               }
             </p>
+            {loadingStage === 'loading_model' && (
+              <div className="mt-2 text-xs text-gray-500">
+                💡 Tip: The model is being downloaded. This only happens once per session.
+              </div>
+            )}
           </div>
         )}
 
@@ -225,8 +263,36 @@ export default function Home() {
           <div className="mt-6">
             <h2 className="text-xl font-semibold mb-3 text-white">Translation Result:</h2>
             <div className="bg-gray-700 p-4 rounded-lg border border-gray-600">
-              <pre className="whitespace-pre-wrap text-gray-200">{JSON.stringify(translationResult, null, 2)}</pre>
+              {translationResult.fallback_used && (
+                <div className="mb-3 p-2 bg-yellow-900 border border-yellow-700 rounded text-yellow-200 text-sm">
+                  ⚠️ Using fallback translation service. For better results, try again when models are available.
+                </div>
+              )}
+              <div className="space-y-2">
+                <div>
+                  <span className="font-medium text-gray-300">Translated Text: </span>
+                  <span className="text-gray-200">{translationResult.translation_text}</span>
+                </div>
+                {translationResult.note && (
+                  <div className="text-sm text-gray-400 italic">{translationResult.note}</div>
+                )}
+              </div>
             </div>
+          </div>
+        )}
+
+        {/* Debug Info */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mt-4 p-3 bg-gray-800 rounded text-xs text-gray-400">
+            <div>Debug Info:</div>
+            <div>Loading: {loading.toString()}</div>
+            <div>Loading Stage: {loadingStage}</div>
+            <div>Active Tab: {activeTab}</div>
+            <div>Translation Result: {translationResult ? 'Present' : 'None'}</div>
+            <div>Error: {error || 'None'}</div>
+            {translationResult && (
+              <div>Result Keys: {Object.keys(translationResult).join(', ')}</div>
+            )}
           </div>
         )}
 

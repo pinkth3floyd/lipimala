@@ -6,12 +6,12 @@
   },
   "env": {
     "HUGGINGFACE_CACHE_DIR": "/tmp/huggingface_cache",
-    "NODE_OPTIONS": "--max-old-space-size=3000"
+    "NODE_OPTIONS": "--max-old-space-size=4000"
   },
   "build": {
     "env": {
       "HUGGINGFACE_CACHE_DIR": "/tmp/huggingface_cache",
-      "NODE_OPTIONS": "--max-old-space-size=3000"
+      "NODE_OPTIONS": "--max-old-space-size=4000"
     }
   },
   "headers": [

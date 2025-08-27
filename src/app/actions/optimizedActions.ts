@@ -1,5 +1,194 @@
 import PipelineManager from "../core/config/optimizedConfig";
 
+// Simple fallback translation dictionary for common phrases
+const fallbackTranslations: Record<string, string> = {
+    'hello': 'नमस्ते',
+    'goodbye': 'अलविदा',
+    'thank you': 'धन्यवाद',
+    'please': 'कृपया',
+    'yes': 'हो',
+    'no': 'होइन',
+    'water': 'पानी',
+    'food': 'खाना',
+    'house': 'घर',
+    'car': 'कार',
+    'book': 'किताब',
+    'computer': 'कम्प्युटर',
+    'phone': 'फोन',
+    'money': 'पैसा',
+    'work': 'काम',
+    'family': 'परिवार',
+    'friend': 'साथी',
+    'time': 'समय',
+    'day': 'दिन',
+    'night': 'रात',
+    'good': 'राम्रो',
+    'bad': 'नराम्रो',
+    'big': 'ठूलो',
+    'small': 'सानो',
+    'hot': 'तातो',
+    'cold': 'चिसो',
+    'new': 'नयाँ',
+    'old': 'पुरानो',
+    'beautiful': 'सुन्दर',
+    'ugly': 'कुरूप',
+    'happy': 'खुशी',
+    'sad': 'दुखी',
+    'angry': 'रिसाउने',
+    'tired': 'थकित',
+    'hungry': 'भोको',
+    'thirsty': 'तिर्खा',
+    'sleepy': 'निद्रालो',
+    'sick': 'बिरामी',
+    'healthy': 'स्वस्थ',
+    'strong': 'बलियो',
+    'weak': 'कमजोर',
+    'fast': 'छिटो',
+    'slow': 'बिस्तारै',
+    'easy': 'सजिलो',
+    'difficult': 'गाह्रो',
+    'important': 'महत्वपूर्ण',
+    'necessary': 'आवश्यक',
+    'possible': 'सम्भव',
+    'impossible': 'असम्भव',
+    'right': 'सही',
+    'wrong': 'गलत',
+    'true': 'सत्य',
+    'false': 'असत्य',
+    'open': 'खुला',
+    'closed': 'बन्द',
+    'clean': 'सफा',
+    'dirty': 'फोहोर',
+    'full': 'भरिएको',
+    'empty': 'खाली',
+    'rich': 'धनी',
+    'poor': 'गरीब',
+    'young': 'जवान',
+    'elderly': 'बुढो',
+    'man': 'पुरुष',
+    'woman': 'महिला',
+    'child': 'बच्चा',
+    'boy': 'केटा',
+    'girl': 'केटी',
+    'father': 'बुबा',
+    'mother': 'आमा',
+    'son': 'छोरा',
+    'daughter': 'छोरी',
+    'brother': 'दाजु',
+    'sister': 'दिदी',
+    'teacher': 'शिक्षक',
+    'student': 'विद्यार्थी',
+    'doctor': 'डाक्टर',
+    'engineer': 'इन्जिनियर',
+    'business': 'व्यवसाय',
+    'school': 'स्कूल',
+    'hospital': 'अस्पताल',
+    'market': 'बजार',
+    'office': 'कार्यालय',
+    'bank': 'बैंक',
+    'hotel': 'होटल',
+    'restaurant': 'रेस्टुरेन्ट',
+    'shop': 'पसल',
+    'road': 'सडक',
+    'bridge': 'पुल',
+    'mountain': 'पहाड',
+    'river': 'नदी',
+    'lake': 'ताल',
+    'forest': 'जंगल',
+    'city': 'शहर',
+    'village': 'गाउँ',
+    'country': 'देश',
+    'world': 'संसार',
+    'sun': 'सूर्य',
+    'moon': 'चन्द्रमा',
+    'star': 'तारा',
+    'cloud': 'बादल',
+    'rain': 'पानी',
+    'snow': 'हिउँ',
+    'wind': 'हावा',
+    'fire': 'आगो',
+    'earth': 'पृथ्वी',
+    'air': 'हावा',
+    'light': 'उज्यालो',
+    'dark': 'अँध्यारो',
+    'color': 'रङ',
+    'red': 'रातो',
+    'blue': 'नीलो',
+    'green': 'हरियो',
+    'yellow': 'पहेंलो',
+    'black': 'कालो',
+    'white': 'सेतो',
+    'brown': 'खैरो',
+    'orange': 'सुन्तला',
+    'purple': 'बैजनी',
+    'pink': 'गुलाफी',
+    'gray': 'खरानी',
+    'number': 'संख्या',
+    'one': 'एक',
+    'two': 'दुई',
+    'three': 'तीन',
+    'four': 'चार',
+    'five': 'पाँच',
+    'six': 'छ',
+    'seven': 'सात',
+    'eight': 'आठ',
+    'nine': 'नौ',
+    'ten': 'दस',
+    'hundred': 'सय',
+    'thousand': 'हजार',
+    'million': 'लाख',
+    'first': 'पहिलो',
+    'second': 'दोस्रो',
+    'third': 'तेस्रो',
+    'last': 'अन्तिम',
+    'next': 'अर्को',
+    'previous': 'अघिल्लो',
+    'today': 'आज',
+    'yesterday': 'हिजो',
+    'tomorrow': 'भोलि',
+    'morning': 'बिहान',
+    'afternoon': 'दिउँसो',
+    'evening': 'साँझ',
+    'nighttime': 'रात',
+    'week': 'हप्ता',
+    'month': 'महिना',
+    'year': 'वर्ष',
+    'spring': 'बसन्त',
+    'summer': 'ग्रीष्म',
+    'autumn': 'शरद',
+    'winter': 'शिशिर',
+    'monday': 'सोमबार',
+    'tuesday': 'मंगलबार',
+    'wednesday': 'बुधबार',
+    'thursday': 'बिहिबार',
+    'friday': 'शुक्रबार',
+    'saturday': 'शनिबार',
+    'sunday': 'आइतबार',
+    'january': 'जनवरी',
+    'february': 'फेब्रुअरी',
+    'march': 'मार्च',
+    'april': 'अप्रिल',
+    'may': 'मे',
+    'june': 'जुन',
+    'july': 'जुलाई',
+    'august': 'अगस्त',
+    'september': 'सेप्टेम्बर',
+    'october': 'अक्टोबर',
+    'november': 'नोभेम्बर',
+    'december': 'डिसेम्बर'
+};
+
+// Fallback translation function
+function fallbackTranslate(text: string): string {
+    const words = text.toLowerCase().split(/\s+/);
+    const translatedWords = words.map(word => {
+        // Remove punctuation for lookup
+        const cleanWord = word.replace(/[.,!?;:]/g, '');
+        return fallbackTranslations[cleanWord] || word;
+    });
+    return translatedWords.join(' ');
+}
+
 // Translation function with fallback
 export async function translateText(text: string, sourceLang: string = 'eng_Latn', targetLang: string = 'npi_Deva') {
     try {
@@ -17,13 +206,74 @@ export async function translateText(text: string, sourceLang: string = 'eng_Latn
         ]);
         
         console.log('Translation completed successfully');
-        return result;
+        console.log('Raw translation result:', result);
+        
+        // Format the result for the UI
+        let formattedResult;
+        if (typeof result === 'string') {
+            formattedResult = {
+                translation_text: result,
+                fallback_used: false
+            };
+        } else if (result && typeof result === 'object') {
+            // Handle different result formats
+            if ('translation_text' in result) {
+                formattedResult = {
+                    translation_text: result.translation_text,
+                    fallback_used: false
+                };
+            } else if ('text' in result) {
+                formattedResult = {
+                    translation_text: result.text,
+                    fallback_used: false
+                };
+            } else {
+                // Try to find any text property
+                const textValue = Object.values(result).find(val => typeof val === 'string');
+                formattedResult = {
+                    translation_text: textValue || JSON.stringify(result),
+                    fallback_used: false
+                };
+            }
+        } else {
+            formattedResult = {
+                translation_text: String(result),
+                fallback_used: false
+            };
+        }
+        
+        console.log('Formatted result:', formattedResult);
+        return formattedResult;
     } catch (error) {
         console.error('Translation failed:', error);
         
-        // Fallback to basic translation or error message
-        if (error instanceof Error && error.message.includes('timeout')) {
-            throw new Error('Translation timed out. The model is still loading or the text is too long. Please try again in a few moments.');
+        // Clear error states to allow retry with different models
+        PipelineManager.clearErrors();
+        
+        // Provide specific error messages based on error type
+        if (error instanceof Error) {
+            if (error.message.includes('timeout')) {
+                throw new Error('Translation timed out. The model is still loading or the text is too long. Please try again in a few moments.');
+            }
+            
+            if (error.message.includes('memory') || error.message.includes('ENOMEM')) {
+                throw new Error('Translation failed due to memory constraints. Please try with shorter text or try again later.');
+            }
+            
+            if (error.message.includes('Failed to load any translation model')) {
+                // Use fallback translation
+                console.log('Using fallback translation service');
+                const fallbackResult = fallbackTranslate(text);
+                return {
+                    translation_text: fallbackResult,
+                    fallback_used: true,
+                    note: 'Translation models unavailable. Using basic dictionary translation.'
+                };
+            }
+            
+            if (error.message.includes('Recent error')) {
+                throw new Error('Translation service is temporarily unavailable. Please wait a moment and try again.');
+            }
         }
         
         throw new Error(`Translation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -63,6 +313,10 @@ export async function correctGrammar(text: string) {
         };
     } catch (error) {
         console.error('Grammar correction failed:', error);
+        
+        // Clear error states
+        PipelineManager.clearErrors();
+        
         // Fallback to basic rules
         return correctGrammarBasic(text);
     }
