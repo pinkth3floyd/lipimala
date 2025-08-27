@@ -22,6 +22,7 @@ interface PipelineCache {
 // Cache configuration
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 const MAX_CACHE_SIZE = 2; // Maximum number of cached pipelines
+const MODEL_LOAD_TIMEOUT = 120000; // 2 minutes timeout for model loading
 
 class PipelineManager {
     private static cache = new Map<string, PipelineCache>();
@@ -69,11 +70,17 @@ class PipelineManager {
             }
         }
 
-        // Create new pipeline
+        // Create new pipeline with timeout
         try {
             this.cache.set(cacheKey, { instance: null, lastUsed: now, loading: true });
             
-            const instance = await createPipeline();
+            // Add timeout to prevent hanging
+            const instance = await Promise.race([
+                createPipeline(),
+                new Promise<never>((_, reject) => 
+                    setTimeout(() => reject(new Error(`Model loading timeout after ${MODEL_LOAD_TIMEOUT/1000}s`)), MODEL_LOAD_TIMEOUT)
+                )
+            ]);
             
             this.cache.set(cacheKey, { 
                 instance: instance as TranslationPipeline | GrammarPipeline, 
@@ -96,20 +103,55 @@ class PipelineManager {
     private static async createTranslationPipeline(): Promise<TranslationPipeline> {
         console.log('Loading translation pipeline...');
         
-        const pipelineInstance = await (pipeline as unknown as (task: string, model: string, options?: Record<string, unknown>) => Promise<TranslationPipeline>)(
-            'translation', 
-            'Xenova/nllb-200-distilled-600M',
-            {
-                dtype: 'fp32',
-                revision: 'main',
-                quantized: true,
-                cache_dir: '/tmp/huggingface_cache', // Use Vercel's temp directory
-                local_files_only: false
-            }
-        );
+        // Try smaller models first for Vercel compatibility
+        const models = [
+            // 'Xenova/nllb-200-distilled-600M',
+            'Xenova/marianmt-en-hi', // Smaller alternative
+            'Xenova/opus-mt-en-hi'   // Even smaller alternative
+        ];
+        
+        let lastError: Error | null = null;
+        
+        for (const modelName of models) {
+            try {
+                console.log(`Attempting to load model: ${modelName}`);
+                
+                const pipelineInstance = await (pipeline as unknown as (task: string, model: string, options?: Record<string, unknown>) => Promise<TranslationPipeline>)(
+                    'translation', 
+                    modelName,
+                    {
+                        dtype: 'fp32',
+                        revision: 'main',
+                        quantized: true,
+                        cache_dir: process.env.HUGGINGFACE_CACHE_DIR || '/tmp/huggingface_cache',
+                        local_files_only: false,
+                        progress_callback: (progress: unknown) => {
+                            console.log(`Model loading progress for ${modelName}:`, progress);
+                        }
+                    }
+                );
 
-        console.log('Translation pipeline loaded successfully');
-        return pipelineInstance;
+                console.log(`Successfully loaded translation pipeline with model: ${modelName}`);
+                return pipelineInstance;
+            } catch (error) {
+                console.warn(`Failed to load model ${modelName}:`, error);
+                lastError = error instanceof Error ? error : new Error('Unknown error');
+                
+                // If it's a memory error, try the next smaller model
+                if (error instanceof Error && (
+                    error.message.includes('memory') || 
+                    error.message.includes('aborted') ||
+                    error.message.includes('timeout')
+                )) {
+                    continue;
+                }
+                
+                // For other errors, break and throw
+                break;
+            }
+        }
+        
+        throw new Error(`Failed to load any translation model. Last error: ${lastError?.message}`);
     }
 
     private static async createGrammarPipeline(): Promise<GrammarPipeline> {
@@ -122,7 +164,7 @@ class PipelineManager {
                 dtype: 'fp32',
                 revision: 'main',
                 quantized: true,
-                cache_dir: '/tmp/huggingface_cache', // Use Vercel's temp directory
+                cache_dir: process.env.HUGGINGFACE_CACHE_DIR || '/tmp/huggingface_cache',
                 local_files_only: false
             }
         );

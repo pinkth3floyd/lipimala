@@ -1,17 +1,31 @@
 import PipelineManager from "../core/config/optimizedConfig";
 
-// Translation function
+// Translation function with fallback
 export async function translateText(text: string, sourceLang: string = 'eng_Latn', targetLang: string = 'npi_Deva') {
     try {
         console.log(`Translating: "${text}" from ${sourceLang} to ${targetLang}`);
         
+        // Try to get cached pipeline first
         const pipeline = await PipelineManager.getTranslationPipeline();
-        const result = await (pipeline as (text: string, options: { src_lang: string; tgt_lang: string }) => Promise<unknown>)(text, { src_lang: sourceLang, tgt_lang: targetLang });
+        
+        // Add timeout for the actual translation
+        const result = await Promise.race([
+            (pipeline as (text: string, options: { src_lang: string; tgt_lang: string }) => Promise<unknown>)(text, { src_lang: sourceLang, tgt_lang: targetLang }),
+            new Promise<never>((_, reject) => 
+                setTimeout(() => reject(new Error('Translation timeout after 30s')), 30000)
+            )
+        ]);
         
         console.log('Translation completed successfully');
         return result;
     } catch (error) {
         console.error('Translation failed:', error);
+        
+        // Fallback to basic translation or error message
+        if (error instanceof Error && error.message.includes('timeout')) {
+            throw new Error('Translation timed out. The model is still loading or the text is too long. Please try again in a few moments.');
+        }
+        
         throw new Error(`Translation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
 }

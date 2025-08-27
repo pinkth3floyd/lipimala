@@ -1,15 +1,17 @@
 {
   "functions": {
     "src/app/actions/optimizedActions.ts": {
-      "maxDuration": 60
+      "maxDuration": 300
     }
   },
   "env": {
-    "HUGGINGFACE_CACHE_DIR": "/tmp/huggingface_cache"
+    "HUGGINGFACE_CACHE_DIR": "/tmp/huggingface_cache",
+    "NODE_OPTIONS": "--max-old-space-size=3000"
   },
   "build": {
     "env": {
-      "HUGGINGFACE_CACHE_DIR": "/tmp/huggingface_cache"
+      "HUGGINGFACE_CACHE_DIR": "/tmp/huggingface_cache",
+      "NODE_OPTIONS": "--max-old-space-size=3000"
     }
   },
   "headers": [

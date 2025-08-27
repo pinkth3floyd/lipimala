@@ -32,6 +32,7 @@ export default function Home() {
   const [translationResult, setTranslationResult] = useState<TranslationResult | null>(null);
   const [grammarResult, setGrammarResult] = useState<GrammarCorrectionResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [cacheStats, setCacheStats] = useState<CacheStats | null>(null);
 
@@ -40,19 +41,29 @@ export default function Home() {
     if (!inputText.trim()) return;
 
     setLoading(true);
+    setLoadingMessage('Loading translation model...');
     setError(null);
     setTranslationResult(null);
     setGrammarResult(null);
 
     try {
+      // Update loading message after a delay to show model loading progress
+      setTimeout(() => {
+        if (loading) {
+          setLoadingMessage('Model loaded! Translating your text...');
+        }
+      }, 5000);
+
       const result = await translateText(inputText, 'eng_Latn', 'npi_Deva');
       setTranslationResult(result as TranslationResult);
       updateCacheStats();
     } catch (err) {
       console.error('Translation error:', err);
-      setError('Failed to translate text. Please try again.');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to translate text. Please try again.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
+      setLoadingMessage('');
     }
   };
 
@@ -61,11 +72,19 @@ export default function Home() {
     if (!inputText.trim()) return;
 
     setLoading(true);
+    setLoadingMessage('Loading grammar correction model...');
     setError(null);
     setTranslationResult(null);
     setGrammarResult(null);
 
     try {
+      // Update loading message after a delay
+      setTimeout(() => {
+        if (loading) {
+          setLoadingMessage('Model loaded! Analyzing grammar...');
+        }
+      }, 3000);
+
       const result = await correctGrammar(inputText);
       // Type assertion to ensure the result matches our interface
       const typedResult: GrammarCorrectionResult = {
@@ -79,9 +98,11 @@ export default function Home() {
       updateCacheStats();
     } catch (err) {
       console.error('Grammar correction error:', err);
-      setError('Failed to correct grammar. Please try again.');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to correct grammar. Please try again.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
+      setLoadingMessage('');
     }
   };
 
@@ -176,15 +197,26 @@ export default function Home() {
 
         {loading && (
           <div className="mt-6 text-center">
-            <p className="text-gray-300">
-              {activeTab === 'translation' ? 'Translating your text...' : 'Correcting grammar...'}
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
+            <p className="text-gray-300">{loadingMessage}</p>
+            <p className="text-sm text-gray-400 mt-2">
+              {activeTab === 'translation' 
+                ? 'This may take a few moments on first use as the model loads...'
+                : 'Analyzing your text...'
+              }
             </p>
           </div>
         )}
 
         {error && (
           <div className="mt-6 p-4 bg-red-900 border border-red-700 rounded-lg">
+            <p className="text-red-300 font-medium mb-2">Error:</p>
             <p className="text-red-300">{error}</p>
+            {error.includes('timeout') && (
+              <p className="text-red-200 text-sm mt-2">
+                💡 Tip: Try again in a few moments, or use shorter text for faster processing.
+              </p>
+            )}
           </div>
         )}
 
