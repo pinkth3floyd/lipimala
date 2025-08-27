@@ -1,8 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { translateText2 } from './actions/actions';
-import { correctNepaliGrammar } from './actions/grammarActions';
+import { translateText, correctGrammar, getCacheStats } from './actions/optimizedActions';
 
 // Define the type for translation result
 interface TranslationResult {
@@ -14,11 +13,17 @@ interface TranslationResult {
 interface GrammarCorrectionResult {
   status: 'Correct' | 'Incorrect';
   original: string;
-  tokens?: string[];
-  incorrect_positions?: number[];
-  incorrect_tokens?: string[];
-  suggestions?: Record<number, string[]>;
   corrected_sentence?: string;
+  suggestions?: Record<number, string[]>;
+  confidence?: number;
+}
+
+// Define the type for cache statistics
+interface CacheStats {
+  size: number;
+  hits: number;
+  misses: number;
+  hitRate: number;
 }
 
 export default function Home() {
@@ -28,6 +33,7 @@ export default function Home() {
   const [grammarResult, setGrammarResult] = useState<GrammarCorrectionResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cacheStats, setCacheStats] = useState<CacheStats | null>(null);
 
   const handleTranslate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -39,8 +45,9 @@ export default function Home() {
     setGrammarResult(null);
 
     try {
-      const result = await translateText2(inputText, 'eng_Latn', 'npi_Deva');
+      const result = await translateText(inputText, 'eng_Latn', 'npi_Deva');
       setTranslationResult(result as TranslationResult);
+      updateCacheStats();
     } catch (err) {
       console.error('Translation error:', err);
       setError('Failed to translate text. Please try again.');
@@ -59,8 +66,17 @@ export default function Home() {
     setGrammarResult(null);
 
     try {
-      const result = await correctNepaliGrammar(inputText);
-      setGrammarResult(result);
+      const result = await correctGrammar(inputText);
+      // Type assertion to ensure the result matches our interface
+      const typedResult: GrammarCorrectionResult = {
+        status: result.status as 'Correct' | 'Incorrect',
+        original: result.original,
+        corrected_sentence: result.corrected_sentence,
+        suggestions: result.suggestions,
+        confidence: result.confidence
+      };
+      setGrammarResult(typedResult);
+      updateCacheStats();
     } catch (err) {
       console.error('Grammar correction error:', err);
       setError('Failed to correct grammar. Please try again.');
@@ -77,10 +93,28 @@ export default function Home() {
     }
   };
 
+  const updateCacheStats = () => {
+    const stats = getCacheStats();
+    setCacheStats(stats);
+  };
+
   return (
     <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
       <div className="w-full max-w-2xl">
         <h1 className="text-3xl font-bold text-center mb-8 text-white">Nepali Language Tools</h1>
+        
+        {/* Cache Stats */}
+        {cacheStats && (
+          <div className="mb-4 p-3 bg-gray-800 rounded-lg text-sm">
+            <div className="text-gray-300 mb-2">Cache Performance:</div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div>Hit Rate: {(cacheStats.hitRate * 100).toFixed(1)}%</div>
+              <div>Cache Size: {cacheStats.size}</div>
+              <div>Hits: {cacheStats.hits}</div>
+              <div>Misses: {cacheStats.misses}</div>
+            </div>
+          </div>
+        )}
         
         {/* Tab Navigation */}
         <div className="flex mb-6 bg-gray-800 rounded-lg p-1">
@@ -111,7 +145,7 @@ export default function Home() {
             <label htmlFor="inputText" className="block text-sm font-medium text-gray-300 mb-2">
               {activeTab === 'translation' 
                 ? 'Enter text to translate (English to Nepali):'
-                : 'Enter Nepali text for grammar correction:'
+                : 'Enter text for grammar correction:'
               }
             </label>
             <textarea
@@ -120,7 +154,7 @@ export default function Home() {
               onChange={(e) => setInputText(e.target.value)}
               placeholder={activeTab === 'translation' 
                 ? "Type your English text here..."
-                : "Type your Nepali text here..."
+                : "Type your text here..."
               }
               className="w-full p-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-gray-700 text-white"
               rows={4}
@@ -179,6 +213,11 @@ export default function Home() {
                   }`}>
                     {grammarResult.status}
                   </span>
+                  {grammarResult.confidence && (
+                    <span className="ml-2 text-sm text-gray-400">
+                      (Confidence: {(grammarResult.confidence * 100).toFixed(1)}%)
+                    </span>
+                  )}
                 </div>
                 
                 <div>
