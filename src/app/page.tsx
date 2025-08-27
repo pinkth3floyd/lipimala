@@ -6,9 +6,10 @@ import { translateText, correctGrammar, getCacheStats } from './actions/optimize
 // Define the type for translation result
 interface TranslationResult {
   translation_text?: string;
-  [key: string]: unknown;
   fallback_used?: boolean;
+  model_used?: string;
   note?: string;
+  [key: string]: unknown;
 }
 
 // Define the type for grammar correction result
@@ -153,189 +154,248 @@ export default function Home() {
   };
 
   return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <div className="w-full max-w-2xl">
-        <h1 className="text-3xl font-bold text-center mb-8 text-white">Nepali Language Tools</h1>
-        
-        {/* Cache Stats */}
-        {cacheStats && (
-          <div className="mb-4 p-3 bg-gray-800 rounded-lg text-sm">
-            <div className="text-gray-300 mb-2">Cache Performance:</div>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div>Hit Rate: {(cacheStats.hitRate * 100).toFixed(1)}%</div>
-              <div>Cache Size: {cacheStats.size}</div>
-              <div>Hits: {cacheStats.hits}</div>
-              <div>Misses: {cacheStats.misses}</div>
-            </div>
-          </div>
-        )}
-        
-        {/* Tab Navigation */}
-        <div className="flex mb-6 bg-gray-800 rounded-lg p-1">
-          <button
-            onClick={() => setActiveTab('translation')}
-            className={`flex-1 py-2 px-4 rounded-md transition-colors ${
-              activeTab === 'translation'
-                ? 'bg-blue-500 text-white'
-                : 'text-gray-300 hover:text-white'
-            }`}
-          >
-            Translation
-          </button>
-          <button
-            onClick={() => setActiveTab('grammar')}
-            className={`flex-1 py-2 px-4 rounded-md transition-colors ${
-              activeTab === 'grammar'
-                ? 'bg-blue-500 text-white'
-                : 'text-gray-300 hover:text-white'
-            }`}
-          >
-            Grammar Correction
-          </button>
+    <div className="min-h-screen bg-gray-900 text-white font-sans">
+      {/* Header */}
+      <header className="bg-gray-800 border-b border-gray-700 py-4 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-2xl sm:text-3xl font-bold text-center text-white">
+            Nepali Language Tools
+          </h1>
         </div>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="inputText" className="block text-sm font-medium text-gray-300 mb-2">
-              {activeTab === 'translation' 
-                ? 'Enter text to translate (English to Nepali):'
-                : 'Enter text for grammar correction:'
-              }
-            </label>
-            <textarea
-              id="inputText"
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              placeholder={activeTab === 'translation' 
-                ? "Type your English text here..."
-                : "Type your text here..."
-              }
-              className="w-full p-3 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-gray-700 text-white"
-              rows={4}
-              required
-            />
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <div className="space-y-6">
+          {/* Cache Stats */}
+          {cacheStats && (
+            <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+              <h3 className="text-sm font-medium text-gray-300 mb-3">Cache Performance</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
+                <div className="text-center">
+                  <div className="text-blue-400 font-medium">{(cacheStats.hitRate * 100).toFixed(1)}%</div>
+                  <div className="text-gray-400">Hit Rate</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-green-400 font-medium">{cacheStats.size}</div>
+                  <div className="text-gray-400">Cache Size</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-yellow-400 font-medium">{cacheStats.hits}</div>
+                  <div className="text-gray-400">Hits</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-red-400 font-medium">{cacheStats.misses}</div>
+                  <div className="text-gray-400">Misses</div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Tab Navigation */}
+          <div className="bg-gray-800 rounded-lg p-1 border border-gray-700">
+            <div className="flex">
+              <button
+                onClick={() => setActiveTab('translation')}
+                className={`flex-1 py-3 px-4 rounded-md transition-all duration-200 font-medium ${
+                  activeTab === 'translation'
+                    ? 'bg-blue-500 text-white shadow-lg'
+                    : 'text-gray-300 hover:text-white hover:bg-gray-700'
+                }`}
+              >
+                Translation
+              </button>
+              <button
+                onClick={() => setActiveTab('grammar')}
+                className={`flex-1 py-3 px-4 rounded-md transition-all duration-200 font-medium ${
+                  activeTab === 'grammar'
+                    ? 'bg-blue-500 text-white shadow-lg'
+                    : 'text-gray-300 hover:text-white hover:bg-gray-700'
+                }`}
+              >
+                Grammar Correction
+              </button>
+            </div>
           </div>
           
-          <button
-            type="submit"
-            disabled={loading || !inputText.trim()}
-            className="w-full bg-blue-500 text-white py-3 px-6 rounded-lg hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-          >
-            {loading 
-              ? (activeTab === 'translation' ? 'Translating...' : 'Correcting...')
-              : (activeTab === 'translation' ? 'Translate' : 'Correct Grammar')
-            }
-          </button>
-        </form>
-
-        {loading && (
-          <div className="mt-6 text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-2"></div>
-            <p className="text-gray-300">{loadingMessage}</p>
-            <p className="text-sm text-gray-400 mt-2">
-              {loadingStage === 'loading_model' 
-                ? 'Downloading and loading translation model... This may take a few minutes on first use.'
-                : 'Translating your text...'
-              }
-            </p>
-            {loadingStage === 'loading_model' && (
-              <div className="mt-2 text-xs text-gray-500">
-                💡 Tip: The model is being downloaded. This only happens once per session.
+          {/* Input Form */}
+          <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="inputText" className="block text-sm font-medium text-gray-300 mb-3">
+                  {activeTab === 'translation' 
+                    ? 'Enter text to translate (English to Nepali):'
+                    : 'Enter text for grammar correction:'
+                  }
+                </label>
+                <textarea
+                  id="inputText"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  placeholder={activeTab === 'translation' 
+                    ? "Type your English text here..."
+                    : "Type your text here..."
+                  }
+                  className="w-full p-4 border border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none bg-gray-700 text-white placeholder-gray-400 min-h-[120px]"
+                  rows={4}
+                  required
+                />
               </div>
-            )}
+              
+              <button
+                type="submit"
+                disabled={loading || !inputText.trim()}
+                className="w-full bg-blue-500 text-white py-4 px-6 rounded-lg hover:bg-blue-600 disabled:bg-gray-600 disabled:cursor-not-allowed transition-all duration-200 font-medium text-lg shadow-lg hover:shadow-xl"
+              >
+                {loading 
+                  ? (activeTab === 'translation' ? 'Translating...' : 'Correcting...')
+                  : (activeTab === 'translation' ? 'Translate' : 'Correct Grammar')
+                }
+              </button>
+            </form>
           </div>
-        )}
 
-        {error && (
-          <div className="mt-6 p-4 bg-red-900 border border-red-700 rounded-lg">
-            <p className="text-red-300 font-medium mb-2">Error:</p>
-            <p className="text-red-300">{error}</p>
-            {error.includes('timeout') && (
-              <p className="text-red-200 text-sm mt-2">
-                💡 Tip: Try again in a few moments, or use shorter text for faster processing.
+          {/* Loading State */}
+          {loading && (
+            <div className="bg-gray-800 rounded-lg p-6 border border-gray-700 text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
+              <p className="text-gray-300 text-lg mb-2">{loadingMessage}</p>
+              <p className="text-sm text-gray-400">
+                {loadingStage === 'loading_model' 
+                  ? 'Downloading and loading translation model... This may take a few minutes on first use.'
+                  : 'Translating your text...'
+                }
               </p>
-            )}
-          </div>
-        )}
-
-        {/* Translation Result */}
-        {translationResult && !loading && activeTab === 'translation' && (
-          <div className="mt-6">
-            <h2 className="text-xl font-semibold mb-3 text-white">Translation Result:</h2>
-            <div className="bg-gray-700 p-4 rounded-lg border border-gray-600">
-              {translationResult.fallback_used && (
-                <div className="mb-3 p-2 bg-yellow-900 border border-yellow-700 rounded text-yellow-200 text-sm">
-                  ⚠️ Using fallback translation service. For better results, try again when models are available.
+              {loadingStage === 'loading_model' && (
+                <div className="mt-4 text-xs text-gray-500 bg-gray-700 rounded p-3">
+                  💡 Tip: The model is being downloaded. This only happens once per session.
                 </div>
               )}
-              <div className="space-y-2">
-                <div>
-                  <span className="font-medium text-gray-300">Translated Text: </span>
-                  <span className="text-gray-200">{translationResult.translation_text}</span>
+            </div>
+          )}
+
+          {/* Error State */}
+          {error && (
+            <div className="bg-red-900 border border-red-700 rounded-lg p-6">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <svg className="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
                 </div>
-                {translationResult.note && (
-                  <div className="text-sm text-gray-400 italic">{translationResult.note}</div>
-                )}
+                <div className="ml-3">
+                  <h3 className="text-lg font-medium text-red-300 mb-2">Error</h3>
+                  <p className="text-red-300">{error}</p>
+                  {error.includes('timeout') && (
+                    <p className="text-red-200 text-sm mt-3">
+                      💡 Tip: Try again in a few moments, or use shorter text for faster processing.
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* Debug Info */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="mt-4 p-3 bg-gray-800 rounded text-xs text-gray-400">
-            <div>Debug Info:</div>
-            <div>Loading: {loading.toString()}</div>
-            <div>Loading Stage: {loadingStage}</div>
-            <div>Active Tab: {activeTab}</div>
-            <div>Translation Result: {translationResult ? 'Present' : 'None'}</div>
-            <div>Error: {error || 'None'}</div>
-            {translationResult && (
-              <div>Result Keys: {Object.keys(translationResult).join(', ')}</div>
-            )}
-          </div>
-        )}
+          {/* Translation Result */}
+          {translationResult && !loading && activeTab === 'translation' && (
+            <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+              <h2 className="text-xl font-semibold mb-4 text-white flex items-center">
+                <svg className="h-6 w-6 mr-2 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Translation Result
+              </h2>
+              <div className="space-y-4">
+                {translationResult.fallback_used && (
+                  <div className="bg-yellow-900 border border-yellow-700 rounded-lg p-4">
+                    <div className="flex items-center">
+                      <svg className="h-5 w-5 text-yellow-400 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                      <span className="text-yellow-200 font-medium">Using fallback translation service</span>
+                    </div>
+                    <p className="text-yellow-100 text-sm mt-2">For better results, try again when models are available.</p>
+                  </div>
+                )}
+                
+                <div className="bg-gray-700 rounded-lg p-4">
+                  <div className="space-y-3">
+                    <div>
+                      <span className="font-medium text-gray-300">Translated Text:</span>
+                      <div className="mt-2 p-3 bg-gray-600 rounded border-l-4 border-blue-500">
+                        <span className="text-white text-lg">{translationResult.translation_text}</span>
+                      </div>
+                    </div>
+                    
+                    {translationResult.model_used && !translationResult.fallback_used && (
+                      <div className="flex items-center text-sm text-blue-300">
+                        <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        Model used: {translationResult.model_used}
+                      </div>
+                    )}
+                    
+                    {translationResult.note && (
+                      <div className="text-sm text-gray-400 italic bg-gray-600 rounded p-3">
+                        {translationResult.note}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
-        {/* Grammar Correction Result */}
-        {grammarResult && !loading && activeTab === 'grammar' && (
-          <div className="mt-6">
-            <h2 className="text-xl font-semibold mb-3 text-white">Grammar Correction Result:</h2>
-            <div className="bg-gray-700 p-4 rounded-lg border border-gray-600">
-              <div className="space-y-3">
-                <div>
-                  <span className="font-medium text-gray-300">Status: </span>
-                  <span className={`px-2 py-1 rounded text-sm ${
+          {/* Grammar Correction Result */}
+          {grammarResult && !loading && activeTab === 'grammar' && (
+            <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
+              <h2 className="text-xl font-semibold mb-4 text-white flex items-center">
+                <svg className="h-6 w-6 mr-2 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Grammar Correction Result
+              </h2>
+              <div className="bg-gray-700 rounded-lg p-4 space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium text-gray-300">Status:</span>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                     grammarResult.status === 'Correct' 
                       ? 'bg-green-600 text-white' 
                       : 'bg-yellow-600 text-white'
                   }`}>
                     {grammarResult.status}
                   </span>
-                  {grammarResult.confidence && (
-                    <span className="ml-2 text-sm text-gray-400">
-                      (Confidence: {(grammarResult.confidence * 100).toFixed(1)}%)
-                    </span>
-                  )}
                 </div>
                 
+                {grammarResult.confidence && (
+                  <div className="text-sm text-gray-400">
+                    Confidence: {(grammarResult.confidence * 100).toFixed(1)}%
+                  </div>
+                )}
+                
                 <div>
-                  <span className="font-medium text-gray-300">Original: </span>
-                  <span className="text-gray-200">{grammarResult.original}</span>
+                  <span className="font-medium text-gray-300">Original:</span>
+                  <div className="mt-2 p-3 bg-gray-600 rounded">
+                    <span className="text-white">{grammarResult.original}</span>
+                  </div>
                 </div>
 
                 {grammarResult.status === 'Incorrect' && grammarResult.corrected_sentence && (
                   <div>
-                    <span className="font-medium text-gray-300">Corrected: </span>
-                    <span className="text-green-300">{grammarResult.corrected_sentence}</span>
+                    <span className="font-medium text-gray-300">Corrected:</span>
+                    <div className="mt-2 p-3 bg-green-900 border border-green-700 rounded">
+                      <span className="text-green-200">{grammarResult.corrected_sentence}</span>
+                    </div>
                   </div>
                 )}
 
                 {grammarResult.suggestions && Object.keys(grammarResult.suggestions).length > 0 && (
                   <div>
-                    <span className="font-medium text-gray-300">Suggestions: </span>
-                    <div className="mt-2 space-y-1">
+                    <span className="font-medium text-gray-300">Suggestions:</span>
+                    <div className="mt-2 space-y-2">
                       {Object.entries(grammarResult.suggestions).map(([position, suggestions]) => (
-                        <div key={position} className="text-sm">
+                        <div key={position} className="text-sm bg-gray-600 rounded p-2">
                           <span className="text-gray-400">Position {position}: </span>
                           <span className="text-blue-300">{suggestions.join(', ')}</span>
                         </div>
@@ -345,9 +405,44 @@ export default function Home() {
                 )}
               </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+
+          {/* Debug Info */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">
+              <h3 className="text-sm font-medium text-gray-300 mb-3">Debug Info</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+                <div className="bg-gray-700 rounded p-2">
+                  <div className="text-gray-400">Loading:</div>
+                  <div className="text-white">{loading.toString()}</div>
+                </div>
+                <div className="bg-gray-700 rounded p-2">
+                  <div className="text-gray-400">Stage:</div>
+                  <div className="text-white">{loadingStage}</div>
+                </div>
+                <div className="bg-gray-700 rounded p-2">
+                  <div className="text-gray-400">Tab:</div>
+                  <div className="text-white">{activeTab}</div>
+                </div>
+                <div className="bg-gray-700 rounded p-2">
+                  <div className="text-gray-400">Result:</div>
+                  <div className="text-white">{translationResult ? 'Present' : 'None'}</div>
+                </div>
+                <div className="bg-gray-700 rounded p-2">
+                  <div className="text-gray-400">Error:</div>
+                  <div className="text-white">{error || 'None'}</div>
+                </div>
+                {translationResult && (
+                  <div className="bg-gray-700 rounded p-2 col-span-2 sm:col-span-1">
+                    <div className="text-gray-400">Keys:</div>
+                    <div className="text-white">{Object.keys(translationResult).join(', ')}</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
     </div>
   );
 }

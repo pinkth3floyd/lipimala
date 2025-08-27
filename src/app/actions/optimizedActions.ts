@@ -197,9 +197,25 @@ export async function translateText(text: string, sourceLang: string = 'eng_Latn
         // Try to get cached pipeline first
         const pipeline = await PipelineManager.getTranslationPipeline();
         
+        // Get the current model information to determine correct language codes
+        const modelInfo = PipelineManager.getCurrentModelInfo();
+        let srcLang, tgtLang;
+        
+        if (modelInfo) {
+            // Use the language codes specific to the loaded model
+            srcLang = modelInfo.src_lang;
+            tgtLang = modelInfo.tgt_lang;
+            console.log(`Using model-specific language codes: ${srcLang} -> ${tgtLang} (Model: ${modelInfo.name})`);
+        } else {
+            // Fallback to NLLB format (eng_Latn -> npi_Deva)
+            srcLang = 'eng_Latn';
+            tgtLang = 'npi_Deva';
+            console.log(`Using fallback language codes: ${srcLang} -> ${tgtLang}`);
+        }
+        
         // Add timeout for the actual translation
         const result = await Promise.race([
-            (pipeline as (text: string, options: { src_lang: string; tgt_lang: string }) => Promise<unknown>)(text, { src_lang: sourceLang, tgt_lang: targetLang }),
+            (pipeline as (text: string, options: { src_lang: string; tgt_lang: string }) => Promise<unknown>)(text, { src_lang: srcLang, tgt_lang: tgtLang }),
             new Promise<never>((_, reject) => 
                 setTimeout(() => reject(new Error('Translation timeout after 30s')), 30000)
             )
@@ -213,32 +229,37 @@ export async function translateText(text: string, sourceLang: string = 'eng_Latn
         if (typeof result === 'string') {
             formattedResult = {
                 translation_text: result,
-                fallback_used: false
+                fallback_used: false,
+                model_used: modelInfo?.name || 'unknown'
             };
         } else if (result && typeof result === 'object') {
             // Handle different result formats
             if ('translation_text' in result) {
                 formattedResult = {
                     translation_text: result.translation_text,
-                    fallback_used: false
+                    fallback_used: false,
+                    model_used: modelInfo?.name || 'unknown'
                 };
             } else if ('text' in result) {
                 formattedResult = {
                     translation_text: result.text,
-                    fallback_used: false
+                    fallback_used: false,
+                    model_used: modelInfo?.name || 'unknown'
                 };
             } else {
                 // Try to find any text property
                 const textValue = Object.values(result).find(val => typeof val === 'string');
                 formattedResult = {
                     translation_text: textValue || JSON.stringify(result),
-                    fallback_used: false
+                    fallback_used: false,
+                    model_used: modelInfo?.name || 'unknown'
                 };
             }
         } else {
             formattedResult = {
                 translation_text: String(result),
-                fallback_used: false
+                fallback_used: false,
+                model_used: modelInfo?.name || 'unknown'
             };
         }
         
@@ -267,6 +288,7 @@ export async function translateText(text: string, sourceLang: string = 'eng_Latn
                 return {
                     translation_text: fallbackResult,
                     fallback_used: true,
+                    model_used: 'fallback_dictionary',
                     note: 'Translation models unavailable. Using basic dictionary translation.'
                 };
             }

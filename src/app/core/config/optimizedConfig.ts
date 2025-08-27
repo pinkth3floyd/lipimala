@@ -18,6 +18,12 @@ interface PipelineCache {
     lastUsed: number;
     loading: boolean;
     error?: string;
+    modelInfo?: {
+        name: string;
+        src_lang: string;
+        tgt_lang: string;
+        description: string;
+    };
 }
 
 // Cache configuration
@@ -122,22 +128,43 @@ class PipelineManager {
             console.log('Running in server environment');
         }
 
-        // Try smaller, more compatible models first
+        // Try models that specifically support English to Nepali translation
         const models = [
-            'Xenova/opus-mt-en-hi',      // Smallest, fastest option (~50MB)
-            'Xenova/marianmt-en-hi',     // Medium size (~150MB)
-            'Xenova/nllb-200-distilled-600M', // Large but more accurate (~600MB)
+            // {
+            //     name: 'Xenova/opus-mt-en-hi',
+            //     src_lang: 'en',
+            //     tgt_lang: 'hi',
+            //     description: 'Smallest, fastest option (~50MB) - English to Hindi (works for Nepali)'
+            // },
+            // {
+            //     name: 'Xenova/marianmt-en-hi',
+            //     src_lang: 'en',
+            //     tgt_lang: 'hi',
+            //     description: 'Medium size (~150MB) - English to Hindi (works for Nepali)'
+            // },
+            {
+                name: 'Xenova/nllb-200-distilled-600M',
+                src_lang: 'eng_Latn',
+                tgt_lang: 'npi_Deva',
+                description: 'Large but most accurate (~600MB) - Native Nepali support'
+            },
+            {
+                name: 'Xenova/m2m100_418M',
+                src_lang: 'en',
+                tgt_lang: 'ne',
+                description: 'Medium size (~400MB) - Direct English to Nepali'
+            }
         ];
         
         let lastError: Error | null = null;
         
-        for (const modelName of models) {
+        for (const model of models) {
             try {
-                console.log(`Attempting to load model: ${modelName}`);
+                console.log(`Attempting to load model: ${model.name}`);
                 
                 // Validate that this is a translation model
-                if (!this.isTranslationModel(modelName)) {
-                    console.warn(`Skipping ${modelName} - not a translation model`);
+                if (!this.isTranslationModel(model.name)) {
+                    console.warn(`Skipping ${model.name} - not a translation model`);
                     continue;
                 }
                 
@@ -149,19 +176,31 @@ class PipelineManager {
                 
                 // Use a simpler pipeline call with timeout
                 const pipelineInstance = await Promise.race([
-                    (pipelineFn as unknown as (task: string, model: string) => Promise<TranslationPipeline>)('translation', modelName),
+                    (pipelineFn as unknown as (task: string, model: string) => Promise<TranslationPipeline>)('translation', model.name),
                     new Promise<never>((_, reject) => 
-                        setTimeout(() => reject(new Error(`Pipeline creation timeout for ${modelName}`)), 120000)
+                        setTimeout(() => reject(new Error(`Pipeline creation timeout for ${model.name}`)), 120000)
                     )
                 ]);
 
-                console.log(`Successfully loaded translation pipeline with model: ${modelName}`);
+                console.log(`Successfully loaded translation pipeline with model: ${model.name}`);
                 console.log('Pipeline instance:', pipelineInstance);
                 console.log('Pipeline type:', typeof pipelineInstance);
+                
+                // Store model information in cache
+                const cacheEntry = this.cache.get('translation');
+                if (cacheEntry) {
+                    cacheEntry.modelInfo = {
+                        name: model.name,
+                        src_lang: model.src_lang,
+                        tgt_lang: model.tgt_lang,
+                        description: model.description
+                    };
+                }
+                
                 return pipelineInstance;
             } catch (error) {
                 const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-                console.warn(`Failed to load model ${modelName}:`, errorMessage);
+                console.warn(`Failed to load model ${model.name}:`, errorMessage);
                 console.error('Full error details:', error);
                 lastError = error instanceof Error ? error : new Error(errorMessage);
                 
@@ -173,12 +212,12 @@ class PipelineManager {
                     error.message.includes('ENOMEM') ||
                     error.message.includes('out of memory')
                 )) {
-                    console.log(`Memory/timeout error with ${modelName}, trying next model...`);
+                    console.log(`Memory/timeout error with ${model.name}, trying next model...`);
                     continue;
                 }
                 
                 // For other errors, also try the next model but log the specific error
-                console.log(`Non-memory error with ${modelName}, trying next model...`);
+                console.log(`Non-memory error with ${model.name}, trying next model...`);
                 continue;
             }
         }
@@ -249,6 +288,11 @@ class PipelineManager {
             misses: this.cacheMisses,
             hitRate: this.cacheHits / (this.cacheHits + this.cacheMisses)
         };
+    }
+
+    static getCurrentModelInfo() {
+        const cacheEntry = this.cache.get('translation');
+        return cacheEntry?.modelInfo || null;
     }
 
     static clearCache(): void {
